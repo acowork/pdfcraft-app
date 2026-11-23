@@ -195,3 +195,13 @@ eframe = { git = "https://github.com/storytold/egui.git", rev = "725a39fca940f77
 egui_demo_lib = { git = "https://github.com/storytold/egui.git", rev = "725a39fca940f77149ffbb9c58eef405a16997bc" }
 egui_inspection = { git = "https://github.com/storytold/egui.git", rev = "725a39fca940f77149ffbb9c58eef405a16997bc" }
 winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }
+
+# ACowork web build (figcraft-app precedent): opt for size, not speed.
+# The desktop `release` profile stays untouched; only `trunk build --release`
+# picks this up via `data-cargo-profile="web-release"` in index.html.
+[profile.web-release]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+strip = true

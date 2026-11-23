@@ -1,0 +1,26 @@
+[package]
+name = "pdfcraft-acowork"
+description = "ACowork hosted PdfCraft process: loopback HTTP /health + /ui/ + workspace-confined MCP (ADR-116/118). Not an ArtCraft product."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "pdfcraft-acowork"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+log = { workspace = true }
+serde_json = { workspace = true }
+env_logger = { version = "0.11", default-features = false, features = ["humantime"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "fs", "signal", "time", "sync"] }
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json"] }
+tower-http = { version = "0.6", features = ["fs"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+pdfcraft-automation = { workspace = true, features = ["mcp"] }
+base64 = "0.22"

@@ -1,0 +1,23 @@
+PdfCraft (ACowork)
+
+This package is an ACowork hosted adaptation of PdfCraft. ACowork publishes it
+for install through the ACowork App Gallery. It is not an ArtCraft product and
+is not sponsored, endorsed, certified or supported by the ArtCraft Team.
+
+You may say, in plain text, that this work is based on PdfCraft by the ArtCraft
+team. Do not present it as an ArtCraft product.
+
+  ACowork fork:  https://github.com/acowork/pdfcraft-app
+  Upstream:      https://github.com/storytold/pdfcraft
+
+Copyright (c) 2026 ArtCraft Team and the PdfCraft contributors.
+Licensed under the MIT License or the Apache License, Version 2.0, at your
+option (LICENSE-MIT, LICENSE-APACHE in this package).
+
+The ArtCraft name, wordmark and logos are trademarks of the ArtCraft Team.
+They are not open source, are not included in this package, and must not be
+used to identify this adaptation. Upstream terms: docs/brand/LICENSE-brand.txt
+in https://github.com/storytold/pdfcraft.
+
+The PdfCraft app icon in assets/icon.png is original PdfCraft artwork, licensed
+MIT OR Apache-2.0 (see assets/ICON-LICENSE.txt). It is not the ArtCraft mark.

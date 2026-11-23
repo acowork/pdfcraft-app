@@ -1,3 +1,5 @@
+> **ACowork hosted adaptation.** This fork packages PdfCraft so ACowork can install it as a hosted app. Public name: **PdfCraft (ACowork)**. It is based on PdfCraft by the ArtCraft team and is **not** an ArtCraft product. Hosted-app notes: [ACOWORK.md](ACOWORK.md). Upstream: [storytold/pdfcraft](https://github.com/storytold/pdfcraft).
+
 <p align="center">
   <a href="https://getartcraft.com/">
     <picture>

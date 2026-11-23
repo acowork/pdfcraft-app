@@ -1,0 +1,45 @@
+id = "pdfcraft"
+version = "0.21.4"
+name = "PdfCraft (ACowork)"
+description = "ACowork hosted adaptation of PdfCraft - PDF reading and editing in an iframe. Based on PdfCraft by the ArtCraft team; not an ArtCraft product."
+icon = "pdfcraft"
+builtin = false
+
+[process]
+runtime = "generic"
+binary = "pdfcraft-acowork"
+port_hint = 18094
+port_file = "pdfcraft.port"
+health_path = "/health"
+
+[mcp]
+path = "/mcp"
+protocol = "streamable-http"
+auto_inject = true
+gateway_path = "/api/apps/pdfcraft/mcp"
+
+[ui]
+path = "/ui/"
+mode = "webview"
+
+[ui.canvas]
+kind = "visual"
+preview_path = "/?file={workspace_file}"
+extensions = ["pdf"]
+
+[ui.nav]
+label = "PdfCraft (ACowork)"
+icon = "pdfcraft"
+order = 44
+
+[activation]
+events = ["onStartup", "onNavigate"]
+
+[permissions]
+platform = ["identity.read", "context.read"]
+
+[package]
+app_api = 1
+# Filled by package.ps1 / package.sh for the target being built.
+platforms = ["windows-x86_64"]
+entry = "bin/pdfcraft-acowork.exe"
