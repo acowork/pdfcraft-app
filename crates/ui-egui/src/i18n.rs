@@ -465,10 +465,25 @@ fn first_supported_tag<S: AsRef<str>>(tags: impl IntoIterator<Item = S>) -> Opti
 /// English when the browser offers none we have a catalog for.
 #[cfg(target_arch = "wasm32")]
 fn detect_system_lang() -> Lang {
+    // A page that embeds PdfCraft passes its own interface language (`?lang=zh-CN`). The browser's
+    // preferred language is the browser's, not the host's, so without this an embedded app opens in
+    // a different language than the window around it. Resolved like any other tag, so a region tag
+    // lands on the language PdfCraft has a catalog for (`zh-CN` → `zh-hans`).
+    if let Some(lang) = host_language().and_then(|tag| first_supported_tag([tag])) {
+        return lang;
+    }
     let Some(navigator) = web_sys::window().map(|w| w.navigator()) else { return Lang::EN };
     let mut tags: Vec<String> = navigator.languages().iter().take(31).filter_map(|v| v.as_string()).collect();
     tags.extend(navigator.language());
     first_supported_tag(&tags).unwrap_or(Lang::EN)
+}
+
+/// The language tag the hosting page asked for, from its URL (`?lang=`). `None` when the page runs
+/// unframed or says nothing.
+#[cfg(target_arch = "wasm32")]
+fn host_language() -> Option<String> {
+    let search = web_sys::window()?.location().search().ok()?;
+    web_sys::UrlSearchParams::new_with_str(&search).ok()?.get("lang").filter(|tag| !tag.trim().is_empty())
 }
 
 thread_local! {

@@ -36,6 +36,11 @@ script into `/ui/` ([`apps/pdfcraft-acowork/src/ui.rs`](apps/pdfcraft-acowork/sr
   `craft-web-host` bridge listens on the canvas — the `?host=parent` transport can never
   connect from the sandboxed (opaque-origin) iframe;
 - maps ACowork's theme message to `view.theme.light` / `view.theme.dark`;
+- maps ACowork's locale message to `ui.language` `{ value: "zh-hans" }`, and reads `?lang=` at
+  startup: the host's interface language is not the browser's, so an embedded PdfCraft opens —
+  and switches — in the language the user set in ACowork. `ui.language` is not an engine command;
+  `crates/ui-egui/src/control/requests.rs` routes it to the same preference the Appearance dialog
+  writes, and lists it in `ui.commands` so a host can discover it;
 - delivers the workspace file as the app's `pdfcraft:open` event (`{name, bytes}`);
 - forwards `pdfcraft:save` to the Desktop, which writes the file back through
   `PUT /api/agents/{id}/workspaces/file` (`contentBase64`) and answers `saved`.
@@ -53,6 +58,20 @@ built-in viewers; uninstalling gives them back.
 # Real web UI built from this tree (needs trunk + wasm32 target)
 .\packaging\acowork\package.ps1 -WithWebUi
 ```
+
+`-WithWebUi` needs the two local checkouts the web build reads its interface material from; a
+package built without them is a different program - no translations, and a Chinese interface with
+boxes where the Japanese face has no simplified hanzi:
+
+```powershell
+.\packaging\acowork\package.ps1 -WithWebUi `
+    -CraftI18nDir E:\projects\tranxon\craft-i18n -CraftFontsDir E:\projects\tranxon\craft-fonts
+```
+
+`craft-i18n` should be at the rev in `craft-i18n.rev` (`git worktree add` a second checkout keeps
+several apps' pins side by side). The script cuts the web build's Chinese and Korean interface
+faces down to the characters the catalogs actually render (`packaging\acowork\subset-ui-font.py`,
+~0.8 MB instead of the 13 MB face native builds carry).
 
 Then, from the ACowork monorepo (or a release of `acowork-pack-app`):
 

@@ -55,6 +55,29 @@ const BRIDGE_SCRIPT: &str = r##"<script data-acowork-bridge="2">
   }
   function startTheme(){applyTheme();if(applied===null&&!themeTimer)themeTimer=setInterval(applyTheme,200);}
 
+  // The host's interface language, mapped onto the app's own. `ui.language` wants a PdfCraft code
+  // (`zh-hans`), while the host reports a BCP 47 tag (`zh-CN`); a tag with no code here is left
+  // alone rather than guessed at, so a host language this build lacks keeps what it has.
+  var LANG_CODES={"en":"en","ja":"ja","ko":"ko","zh-CN":"zh-hans","zh-SG":"zh-hans","zh-Hans":"zh-hans","zh-TW":"zh-hant","zh-HK":"zh-hant","zh-Hant":"zh-hant"};
+  var lastLang=null,langApplied=null,langTimer=null;
+  function langCommand(tag){
+    var c=LANG_CODES[tag]||LANG_CODES[String(tag).split("-")[0]];
+    return c?["ui.language",{value:c}]:null;
+  }
+  function stopLang(){if(langTimer){clearInterval(langTimer);langTimer=null;}}
+  function applyLang(){
+    if(lastLang===null)return;
+    if(langApplied===lastLang){stopLang();return;}
+    var c=langCommand(lastLang),a=api();
+    if(!c){langApplied=lastLang;stopLang();return;}
+    try{
+      if(a&&typeof a.execute==="function"){a.execute(c[0],c[1]);langApplied=lastLang;}
+      else if(a&&typeof a.command==="function"){a.command(c[0],JSON.stringify(c[1]));langApplied=lastLang;}
+    }catch(e){}
+    if(langApplied===lastLang)stopLang();
+  }
+  function startLang(){applyLang();if(langApplied===null&&!langTimer)langTimer=setInterval(applyLang,200);}
+
   // The font stack lives in the app's wasm memory, so every frame reload starts
   // without it. Faces are fetched from this app's own origin and kept in the
   // page's own store, so a reopen of the same document re-adds them locally
@@ -355,6 +378,9 @@ const BRIDGE_SCRIPT: &str = r##"<script data-acowork-bridge="2">
     var d=e.data;
     if(!d||d.channel!=="acowork")return;
     if(d.type==="theme"){lastDark=(d.theme==="dark");applied=null;startTheme();}
+    // The host re-sends its language whenever anything in its chrome changes, so a repeat of
+    // the same tag is dropped: it would undo a language the user picked in PdfCraft's own options.
+    else if(d.type==="locale"){if(d.locale&&d.locale!==lastLang){lastLang=d.locale;langApplied=null;startLang();}}
     else if(d.type==="openFile")deliver(d);
     else if(d.type==="saved")fire("saved",{id:d.id});
     else if(d.type==="saveFailed")fire("failed",{error:d.error||"save failed",id:d.id});

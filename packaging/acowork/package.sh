@@ -54,6 +54,24 @@ if [[ -n "$WEB_ARCHIVE" ]]; then
   rm -rf "$tmp"
 elif [[ "$WITH_WEB_UI" == "1" ]]; then
   echo "Building pdfcraft-web via trunk..."
+  # The web build embeds its translations and its CJK interface faces from local checkouts. Both are
+  # build inputs: without the catalogs the package has no translations at all, and its only CJK face
+  # is the Japanese one, which lacks a quarter of the simplified hanzi it renders.
+  : "${CRAFT_I18N_DIR:?WITH_WEB_UI needs CRAFT_I18N_DIR (a craft-i18n checkout): a package without the catalogs cannot change language}"
+  : "${CRAFT_FONTS_DIR:?WITH_WEB_UI needs CRAFT_FONTS_DIR (a craft-fonts checkout): the web build's CJK faces come from it}"
+  pinned="$(tr -d '[:space:]' < "$ROOT/craft-i18n.rev" 2>/dev/null || true)"
+  actual="$(git -C "$CRAFT_I18N_DIR" rev-parse HEAD 2>/dev/null || true)"
+  if [[ -n "$actual" && -n "$pinned" && "$actual" != "$pinned" ]]; then
+    echo "warning: craft-i18n at ${actual:0:8}, this app pins ${pinned:0:8}; build from a worktree at the pinned rev for a reproducible package" >&2
+  fi
+  export CRAFT_I18N_DIR CRAFT_FONTS_DIR
+  # The CJK interface faces, cut to the characters the catalogs actually render: ~0.8 MB instead of
+  # the 13 MB Chinese face the web build drops, and the Korean face it never had.
+  font_out="$ROOT/dist/fonts"
+  python3 "$(dirname "$0")/subset-ui-font.py" --fonts-dir "$CRAFT_FONTS_DIR" --i18n-dir "$CRAFT_I18N_DIR" --out-dir "$font_out"
+  PDFCRAFT_UI_HANS_SUBSET="$font_out/pdfcraft-ui-hans.ttf"
+  PDFCRAFT_UI_KORE_SUBSET="$font_out/pdfcraft-ui-kore.ttf"
+  export PDFCRAFT_UI_HANS_SUBSET PDFCRAFT_UI_KORE_SUBSET
   (cd "$ROOT/apps/pdfcraft-web" && trunk build --release)
   cp -R "$ROOT/dist/web/." "$OUT_DIR/ui/"
 else

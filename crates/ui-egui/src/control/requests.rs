@@ -18,6 +18,15 @@ impl Control {
             "ui.commands" => Ok(Handled::Now(Ok(host.commands()))),
             "ui.panel" | "ui.dock.reset" => Ok(Handled::Now(host.panel(method == "ui.dock.reset", p))),
             "ui.command" if str_param("id")? == "ui.panel" => Ok(Handled::Now(host.panel(false, p.get("params").unwrap_or(p)))),
+            // The interface language is a preference, not an engine command: `ui.commands` lists
+            // what the toolbar and menus can run, and switching language is not in it. The page API's
+            // `execute("ui.language", {value})` reaches here as `ui.command` with an id, so this
+            // routes it to the same setter the Appearance dialog uses. Same value shape as `ui.set`.
+            "ui.command" if str_param("id")? == "ui.language" => {
+                let params = p.get("params").unwrap_or(p);
+                let value = params.get("value").and_then(Value::as_str).ok_or_else(|| "ui.language: missing string parameter value".to_string())?;
+                Ok(Handled::Now(host.set("language", value)))
+            }
             "ui.command" => Ok(Handled::Now(host.command(str_param("id")?))),
             "ui.set" => {
                 let value = match p.get("value") {

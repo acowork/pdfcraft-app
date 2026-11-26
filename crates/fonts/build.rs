@@ -3,7 +3,8 @@
 //! the local checkout (no network). On wasm32 it embeds only the UI faces (BIZ UDPGothic Regular
 //! and any `Arab`, `Telu`, `Hebr`, `Thai` or `Deva` face), to keep the web build within hosting
 //! limits (Cloudflare Pages: 25 MiB per file). Native builds also read the optional
-//! `fonts/simplified-chinese-manifest.txt` (LXGW WenKai Lite); it is never embedded on wasm.
+//! `fonts/simplified-chinese-manifest.txt` (LXGW WenKai Lite); only a subset of it, built by
+//! `packaging/acowork/subset-ui-font.py`, is embedded on wasm (see [`ui_subsets`]).
 //! `CRAFT_FONTS_REQUIRED` makes both the checkout and that native manifest required.
 
 use std::fmt::Write as _;
@@ -28,11 +29,63 @@ fn main() {
     } else if required {
         println!("cargo::error=CRAFT_FONTS_REQUIRED is set but CRAFT_FONTS_DIR is missing");
     }
+    src.push_str(&ui_subsets());
     src.push_str("];\n");
     let out = PathBuf::from(std::env::var_os("OUT_DIR").unwrap_or_default()).join("craft_fonts.rs");
     if let Err(e) = std::fs::write(&out, src) {
         println!("cargo::error=writing {}: {e}", out.display());
     }
+}
+
+/// The web build's derived interface faces: the family name `packaging/acowork/subset-ui-font.py`
+/// writes into the file, the environment variable that points at it, and the ISO 15924 script
+/// `crates/fonts/src/craft.rs` selects it by.
+const UI_SUBSETS: &[(&str, &str, &[&str])] =
+    &[("PdfCraft UI Hans", "PDFCRAFT_UI_HANS_SUBSET", &["Hans", "Hant"]), ("PdfCraft UI Kore", "PDFCRAFT_UI_KORE_SUBSET", &["Kore"])];
+
+/// More `CraftFont` lines, for the interface faces a web build was handed as subsets.
+///
+/// On wasm the table keeps only the Japanese CJK face (BIZ UDPGothic) to stay inside the hosting
+/// limit, and it has no Korean face at all. BIZ has no simplified-only hanzi — `们`, `这`, `识` and
+/// roughly a quarter of this interface's Chinese catalog (#241) — and a browser offers no installed
+/// font to fall back on, so a Chinese or Korean interface shows boxes however the language was
+/// chosen. `packaging/acowork/subset-ui-font.py` cuts the two faces the native build uses down to
+/// the characters the embedded catalogs actually render (~0.8 MB for both); this adds them back.
+/// Unset, the table stays exactly what the manifests say.
+fn ui_subsets() -> String {
+    if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() != Ok("wasm32") {
+        // Native builds embed the full faces; a subset would only add weight.
+        for (_, var, _) in UI_SUBSETS {
+            println!("cargo::rerun-if-env-changed={var}");
+            if std::env::var_os(var).is_some_and(|p| !p.is_empty()) {
+                println!("cargo::warning={var} is set for a native build, which already embeds the full faces; ignoring");
+            }
+        }
+        return String::new();
+    }
+    let mut out = String::new();
+    for (family, var, scripts) in UI_SUBSETS {
+        println!("cargo::rerun-if-env-changed={var}");
+        let Some(path) = std::env::var_os(var).filter(|p| !p.is_empty()) else {
+            continue;
+        };
+        let path = PathBuf::from(path);
+        let scripts: Vec<String> = scripts.iter().map(|s| format!("{s:?}")).collect();
+        match std::fs::metadata(&path) {
+            Ok(m) if m.len() > 4096 => {
+                println!("cargo::rerun-if-changed={}", path.display());
+                let _ = writeln!(
+                    out,
+                    "    CraftFont {{ family: {family:?}, style: \"Regular\", scripts: &[{}], bytes: include_bytes!({:?}) }},",
+                    scripts.join(", "),
+                    path.display().to_string(),
+                );
+            }
+            Ok(_) => println!("cargo::error={var}={}: too small to be an interface face", path.display()),
+            Err(e) => println!("cargo::error={var}={}: {e}", path.display()),
+        }
+    }
+    out
 }
 
 /// The main manifest, plus the native-only Simplified Chinese manifest. The latter is optional

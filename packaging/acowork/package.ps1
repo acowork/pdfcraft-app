@@ -3,7 +3,12 @@ param(
     [string]$OutDir = "",
     [switch]$WithWebUi,
     [string]$WebArchive = "",
-    [string]$Platform = "windows-x86_64"
+    [string]$Platform = "windows-x86_64",
+    # Local checkouts the web build reads its interface material from (no network at build time).
+    # CRAFT_I18N_DIR supplies the translations; without it the package ships an English-only
+    # interface whatever the host asks for. CRAFT_FONTS_DIR supplies the CJK faces.
+    [string]$CraftI18nDir = $env:CRAFT_I18N_DIR,
+    [string]$CraftFontsDir = $env:CRAFT_FONTS_DIR
 )
 
 $ErrorActionPreference = "Stop"
@@ -65,6 +70,26 @@ if ($WebArchive) {
     }
 } elseif ($WithWebUi) {
     Write-Host "Building pdfcraft-web via trunk..."
+    # The web build embeds its translations and its CJK interface faces from local checkouts. Both
+    # are build inputs: without the catalogs the package has no translations at all, and its only
+    # CJK face is the Japanese one, which lacks a quarter of the simplified hanzi it renders.
+    if (-not $CraftI18nDir) { throw "WithWebUi needs -CraftI18nDir (or CRAFT_I18N_DIR): a package without the catalogs cannot change language" }
+    if (-not $CraftFontsDir) { throw "WithWebUi needs -CraftFontsDir (or CRAFT_FONTS_DIR): the web build's CJK faces come from that checkout" }
+    $pinned = (Get-Content (Join-Path $Root "craft-i18n.rev") -Raw).Trim()
+    $actual = (& git -C $CraftI18nDir rev-parse HEAD 2>$null)
+    if ($LASTEXITCODE -eq 0 -and $actual -and $actual.Trim() -ne $pinned) {
+        Write-Warning "craft-i18n at $($actual.Trim().Substring(0,8)), this app pins $($pinned.Substring(0,8)): build from a worktree at the pinned rev for a reproducible package"
+    }
+    $env:CRAFT_I18N_DIR = $CraftI18nDir
+    $env:CRAFT_FONTS_DIR = $CraftFontsDir
+    # The CJK interface faces, cut to the characters the catalogs above actually render: ~0.8 MB
+    # instead of the 13 MB Chinese face the web build drops, and the Korean face it never had.
+    # See packaging/acowork/subset-ui-font.py.
+    $fontOut = Join-Path (Join-Path $Root "dist") "fonts"
+    & python (Join-Path $PSScriptRoot "subset-ui-font.py") --fonts-dir $CraftFontsDir --i18n-dir $CraftI18nDir --out-dir $fontOut
+    if ($LASTEXITCODE -ne 0) { throw "the web interface faces failed to build" }
+    $env:PDFCRAFT_UI_HANS_SUBSET = (Resolve-Path (Join-Path $fontOut "pdfcraft-ui-hans.ttf")).Path
+    $env:PDFCRAFT_UI_KORE_SUBSET = (Resolve-Path (Join-Path $fontOut "pdfcraft-ui-kore.ttf")).Path
     Push-Location (Join-Path $Root "apps\pdfcraft-web")
     try {
         trunk build --release

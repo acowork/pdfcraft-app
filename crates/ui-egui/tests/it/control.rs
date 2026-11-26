@@ -533,6 +533,36 @@ fn lithuanian_inspector_title_updates_through_the_control_channel() {
     h.get_by_label("Inspector");
 }
 
+/// The page API has `execute`, which reaches `ui.command`, and the interface language is not an
+/// engine command: a host that changes the app's language (ACowork, from its own UI setting) gets
+/// one id for it here. Same preference the Appearance dialog and `ui.set` write.
+#[test]
+fn the_page_api_sets_the_interface_language() {
+    if crate::support::skip_without_catalogs("the_page_api_sets_the_interface_language") {
+        return;
+    }
+    let (mut h, c) = harness();
+    ok(&mut h, &c, "ui.set", json!({ "key": "panel", "value": "comments" }));
+    h.run_steps(2);
+    h.get_by_label("Inspector");
+    ok(&mut h, &c, "ui.command", json!({ "id": "ui.language", "params": { "value": "lt" } }));
+    h.run_steps(2);
+    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "lt");
+    h.get_by_label("Inspektorius");
+    // `execute(command, params)` on the page arrives as `ui.command` with an id: both shapes work.
+    ok(&mut h, &c, "ui.command", json!({ "id": "ui.language", "value": "en" }));
+    h.run_steps(2);
+    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "en");
+    // A language this build has no catalog for is refused, not silently ignored.
+    let err = call(&mut h, &c, "ui.command", json!({ "id": "ui.language", "params": { "value": "qaa-QM" } })).unwrap_err();
+    assert!(err.contains("language must be one of"), "{err}");
+    ok(&mut h, &c, "ui.command", json!({ "id": "ui.language", "params": { "value": "auto" } }));
+    // And it is discoverable, like `ui.panel`.
+    let listed = ok(&mut h, &c, "ui.commands", json!({}));
+    let ids: Vec<&str> = listed["commands"].as_array().unwrap().iter().filter_map(|c| c["id"].as_str()).collect();
+    assert!(ids.contains(&"ui.language"), "ui.commands lists {ids:?}");
+}
+
 /// Switching the interface language changes labels only: documents, their dirty state and the
 /// command ids agents drive stay exactly the same.
 #[test]

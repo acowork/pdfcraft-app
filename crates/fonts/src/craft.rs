@@ -43,6 +43,13 @@ pub fn ui_chinese_fonts() -> Vec<&'static CraftFont> {
     CRAFT_FONTS.iter().filter(|f| f.covers("Hans")).collect()
 }
 
+/// The `Kore` craft-fonts faces for Korean interface text (the Korean interface, file names), in
+/// manifest order. Empty when built without craft-fonts, or on a web build that was not given the
+/// subset face: the Japanese face has no Hangul, so Korean text then shows the replacement glyph.
+pub fn ui_korean_fonts() -> Vec<&'static CraftFont> {
+    CRAFT_FONTS.iter().filter(|f| f.covers("Kore")).collect()
+}
+
 /// The `Arab` craft-fonts faces for Arabic-script interface text (file names, document titles),
 /// in manifest order. Empty when built without craft-fonts or when it has no Arabic face.
 pub fn ui_arabic_fonts() -> Vec<&'static CraftFont> {

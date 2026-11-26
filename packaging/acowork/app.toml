@@ -1,5 +1,5 @@
 id = "pdfcraft"
-version = "0.21.5"
+version = "0.21.6"
 name = "PdfCraft (ACowork)"
 description = "ACowork hosted adaptation of PdfCraft - PDF reading and editing in an iframe. Based on PdfCraft by the ArtCraft team; not an ArtCraft product."
 icon = "pdfcraft"
